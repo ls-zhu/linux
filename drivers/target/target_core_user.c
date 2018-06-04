@@ -2437,6 +2437,54 @@ err_xattr_free:
 	return rc;
 }
 
+static int tcmu_pr_info_init(struct tcmu_dev *udev,
+			     struct tcmu_pr_info **_pr_info,
+			     char **_pr_xattr, int *_pr_xattr_len)
+{
+	struct tcmu_pr_info *pr_info;
+	char *pr_xattr = NULL;
+	int pr_xattr_len = 0;
+	int rc;
+
+	pr_info = kzalloc(sizeof(*pr_info), GFP_KERNEL);
+	if (!pr_info)
+		return -ENOMEM;
+
+	pr_info->vers = TCMU_PR_INFO_XATTR_VERS;
+	INIT_LIST_HEAD(&pr_info->regs);
+	pr_info->seq = 1;
+
+	rc = tcmu_pr_info_encode(pr_info, &pr_xattr, &pr_xattr_len);
+	if (rc) {
+		pr_err("failed to encode PR xattr: %d\n", rc);
+		goto err_info_free;
+	}
+
+	rc = tcmu_set_dev_pr_info(udev, pr_xattr);
+	if (rc) {
+		pr_err("failed to set PR xattr: %d\n", rc);
+		goto err_xattr_free;
+	}
+
+	*_pr_info = pr_info;
+	if (_pr_xattr) {
+		WARN_ON(!_pr_xattr_len);
+		*_pr_xattr = pr_xattr;
+		*_pr_xattr_len = pr_xattr_len;
+	} else {
+		kfree(pr_xattr);
+	}
+	pr_debug("successfully initialized PR info\n");
+
+	return 0;
+
+err_xattr_free:
+	kfree(pr_xattr);
+err_info_free:
+	kfree(pr_info);
+	return rc;
+}
+
 static int tcmu_configure_device(struct se_device *dev)
 {
 	struct tcmu_dev *udev = TCMU_DEV(dev);
