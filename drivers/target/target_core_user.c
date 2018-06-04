@@ -2046,6 +2046,40 @@ static int tcmu_pr_info_rsv_encode(char *buf, size_t buf_remain,
 	return rc;
 }
 
+static int
+tcmu_pr_info_num_regs_decode(char *str, u32 *num_regs)
+{
+	int rc;
+
+	if (!num_regs) {
+		WARN_ON(1);
+		return -EINVAL;
+	}
+
+	rc = sscanf(str, "0x%08x", num_regs);
+	if (rc != 1) {
+		pr_err("failed to parse PR num regs: %s\n", str);
+		return -EINVAL;
+	}
+	pr_debug("processed pr_info num_regs: %s\n", str);
+
+	return 0;
+}
+
+static int tcmu_pr_info_num_regs_encode(char *buf, size_t buf_remain,
+					u32 num_regs)
+{
+	int rc;
+
+	rc = snprintf(buf, buf_remain, "0x%08x\n", num_regs);
+	if ((rc < 0) || (rc >= buf_remain)) {
+		pr_err("failed to encode PR num_regs\n");
+		return -EINVAL;
+	}
+
+	return rc;
+}
+
 static int tcmu_configure_device(struct se_device *dev)
 {
 	struct tcmu_dev *udev = TCMU_DEV(dev);
