@@ -1940,6 +1940,40 @@ tcmu_pr_info_scsi2_rsv_encode(char *buf, size_t buf_remain,
 	return rc;
 }
 
+static int
+tcmu_pr_info_gen_decode(char *str, u32 *gen)
+{
+	int rc;
+
+	if (!gen) {
+		WARN_ON(1);
+		return -EINVAL;
+	}
+	rc = sscanf(str, "0x%08x", gen);
+	if (rc != 1) {
+		pr_err("failed to parse PR gen: %s\n", str);
+		return -EINVAL;
+	}
+
+	pr_debug("processed pr_info generation: %s\n", str);
+
+	return 0;
+}
+
+static int
+tcmu_pr_info_gen_encode(char *buf, size_t buf_remain, u32 gen)
+{
+	int rc;
+
+	rc = snprintf(buf, buf_remain, "0x%08x\n", gen);
+	if ((rc < 0) || (rc >= buf_remain)) {
+		pr_err("failed to encode PR gen\n");
+		return -EINVAL;
+	}
+
+	return rc;
+}
+
 static int tcmu_configure_device(struct se_device *dev)
 {
 	struct tcmu_dev *udev = TCMU_DEV(dev);
