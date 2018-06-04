@@ -2131,6 +2131,20 @@ static int tcmu_pr_info_reg_encode(char *buf, size_t buf_remain,
 	return rc;
 }
 
+static void
+tcmu_pr_info_free(struct tcmu_pr_info *pr_info)
+{
+	struct tcmu_pr_reg *reg;
+	struct tcmu_pr_reg *reg_n;
+
+	kfree(pr_info->scsi2_rsv);
+	kfree(pr_info->rsv);
+	list_for_each_entry_safe(reg, reg_n, &pr_info->regs, regs_node) {
+		kfree(reg);
+	}
+	kfree(pr_info);
+}
+
 static int tcmu_configure_device(struct se_device *dev)
 {
 	struct tcmu_dev *udev = TCMU_DEV(dev);
