@@ -93,6 +93,8 @@
  */
 #define TCMU_GLOBAL_MAX_BLOCKS_DEF (512 * 1024)
 
+#define TCMU_PR_INFO_XATTR_VERS		1
+
 static u8 tcmu_kern_cmd_reply_supported;
 
 static struct device *tcmu_root_device;
@@ -1809,6 +1811,66 @@ tcmu_gen_it_nexus(struct se_session *se_sess,
 	}
 
 	pr_debug("generated nexus: %s\n", nexus_buf);
+
+	return 0;
+}
+
+static int
+tcmu_pr_info_seq_decode(char *str, u32 *seq)
+{
+	int rc;
+
+	if (!seq) {
+		WARN_ON(1);
+		return -EINVAL;
+	}
+	rc = sscanf(str, "0x%08x", seq);
+	if (rc != 1) {
+		pr_err("failed to decode PR info seqnum in: %s\n", str);
+		return -EINVAL;
+	}
+
+	pr_debug("processed pr_info seqnum: %u\n", *seq);
+
+	return 0;
+}
+
+static int
+tcmu_pr_info_vers_seq_encode(char *buf, size_t buf_remain, u32 vers, u32 seq)
+{
+	int rc;
+
+	rc = snprintf(buf, buf_remain, "0x%08x\n0x%08x\n",
+		      vers, seq);
+	if ((rc < 0) || (rc >= buf_remain)) {
+		pr_err("failed to encode PR vers and seq\n");
+		return -EINVAL;
+	}
+
+	return rc;
+}
+
+static int
+tcmu_pr_info_vers_decode(char *str, u32 *vers)
+{
+	int rc;
+
+	if (!vers) {
+		WARN_ON(1);
+		return -EINVAL;
+	}
+	rc = sscanf(str, "0x%08x", vers);
+	if (rc != 1) {
+		pr_err("failed to decode PR info version in: %s\n", str);
+		return -EINVAL;
+	}
+
+	if (*vers != TCMU_PR_INFO_XATTR_VERS) {
+		pr_err("unsupported PR info version: %u\n", *vers);
+		return -EINVAL;
+	}
+
+	pr_debug("processed pr_info version: %u\n", *vers);
 
 	return 0;
 }
