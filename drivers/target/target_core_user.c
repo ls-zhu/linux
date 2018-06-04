@@ -1683,6 +1683,21 @@ static int tcmu_send_dev_remove_event(struct tcmu_dev *udev)
 				       &skb, &msg_header);
 }
 
+static int tcmu_send_get_pr_info_event(struct tcmu_dev *udev)
+{
+	struct sk_buff *skb = NULL;
+	void *msg_header = NULL;
+	int ret = 0;
+
+	ret = tcmu_netlink_event_init(udev, TCMU_CMD_GET_PR_INFO,
+				      &skb, &msg_header);
+	if (ret < 0)
+		return ret;
+
+	return tcmu_netlink_event_send(udev, TCMU_CMD_GET_PR_INFO,
+				       &skb, &msg_header);
+}
+
 static int tcmu_update_uio_info(struct tcmu_dev *udev)
 {
 	struct tcmu_hba *hba = udev->hba->hba_ptr;
@@ -1707,6 +1722,22 @@ static int tcmu_update_uio_info(struct tcmu_dev *udev)
 	info->name = str;
 
 	return 0;
+}
+
+/*
+ * This funtion will get PR INFO(a string)from a TCMU device.
+ * PR INFO will be stored at udev->pr_info.pr_info_buf.
+ */
+static int tcmu_get_dev_pr_info(struct tcmu_dev *udev, int *val_len)
+{
+	int ret = 0;
+
+	ret = tcmu_send_get_pr_info_event(udev);
+	*val_len = strlen(udev->pr_info.pr_info_buf);
+	if (*val_len == 0)
+		ret = -ENODATA;
+
+	return ret;
 }
 
 static int tcmu_configure_device(struct se_device *dev)
