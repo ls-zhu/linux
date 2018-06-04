@@ -110,6 +110,14 @@ struct tcmu_nl_cmd {
 	int status;
 };
 
+/* This struct help to store the string buffer which contain
+ * Persistent Reservation info record from the device metadata.
+ */
+struct tcmu_dev_pr_info {
+	struct mutex pr_info_lock;
+	char *pr_info_buf;
+	};
+
 struct tcmu_dev {
 	struct list_head node;
 	struct kref kref;
@@ -165,6 +173,7 @@ struct tcmu_dev {
 	char dev_config[TCMU_CONFIG_LEN];
 
 	int nl_reply_supported;
+	struct tcmu_dev_pr_info pr_info;
 };
 
 #define TCMU_DEV(_se_dev) container_of(_se_dev, struct tcmu_dev, se_dev)
