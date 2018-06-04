@@ -107,6 +107,31 @@
 #define TCMU_PR_INFO_XATTR_FIELD_NUM_REGS	5
 #define TCMU_PR_INFO_XATTR_FIELD_REGS_START	6
 
+/* don't allow encoded PR info to exceed 8K */
+#define TCMU_PR_INFO_XATTR_MAX_SIZE 8192
+
+#define TCMU_PR_INFO_XATTR_ENCODED_SCSI2_RSV_MAXLEN		\
+	(TCMU_PR_IT_NEXUS_MAXLEN + sizeof("\n"))
+
+#define TCMU_PR_INFO_XATTR_ENCODED_PR_RSV_MAXLEN		\
+	((sizeof("0x") + sizeof(u64) * 2) + sizeof(" ") +	\
+	 TCMU_PR_IT_NEXUS_MAXLEN + sizeof(" ") +		\
+	 (sizeof("0x") + sizeof(u64) * 2) + sizeof("\n"))
+
+#define TCMU_PR_INFO_XATTR_ENCODED_PR_REG_MAXLEN		\
+	((sizeof("0x") + sizeof(u64) * 2) + sizeof(" ") +	\
+	 TCMU_PR_IT_NEXUS_MAXLEN + sizeof("\n"))
+
+#define TCMU_PR_INFO_XATTR_ENCODED_MAXLEN(_num_regs)			\
+	 ((sizeof("0x") + sizeof(u32) * 2) + sizeof("\n") +		\
+	 (sizeof("0x") + sizeof(u32) * 2) + sizeof("\n") +		\
+	 TCMU_PR_INFO_XATTR_ENCODED_SCSI2_RSV_MAXLEN +		\
+	 (sizeof("0x") + sizeof(u32) * 2) + sizeof("\n") +		\
+	 TCMU_PR_INFO_XATTR_ENCODED_PR_RSV_MAXLEN +			\
+	 (sizeof("0x") + sizeof(u32) * 2) + sizeof("\n") +		\
+	 (TCMU_PR_INFO_XATTR_ENCODED_PR_REG_MAXLEN * _num_regs) +	\
+	 sizeof("\0"))
+
 static u8 tcmu_kern_cmd_reply_supported;
 
 static struct device *tcmu_root_device;
@@ -2301,6 +2326,114 @@ static int tcmu_pr_info_get(struct tcmu_dev *udev,
 
 err_dup_xattr_free:
 	kfree(dup_xattr);
+	return rc;
+}
+
+static int tcmu_pr_info_encode(struct tcmu_pr_info *pr_info,
+			       char **_pr_xattr, int *pr_xattr_len)
+{
+	struct tcmu_pr_reg *reg;
+	char *pr_xattr;
+	char *p;
+	size_t buf_remain;
+	int rc;
+	int i;
+
+	if (pr_info->vers != TCMU_PR_INFO_XATTR_VERS) {
+		pr_err("unsupported PR info version: %u\n", pr_info->vers);
+		return -EINVAL;
+	}
+
+	buf_remain = TCMU_PR_INFO_XATTR_ENCODED_MAXLEN(pr_info->num_regs);
+	if (buf_remain > TCMU_PR_INFO_XATTR_MAX_SIZE) {
+		pr_err("PR info too large for encoding: %zd\n", buf_remain);
+		return -EINVAL;
+	}
+	pr_debug("encoding PR info: vers=%u, seq=%u, gen=%u, num regs=%u ",
+	       pr_info->vers, pr_info->seq, pr_info->gen, pr_info->num_regs);
+	pr_debug("into %zd bytes\n", buf_remain);
+
+	pr_xattr = kmalloc(buf_remain, GFP_KERNEL);
+	if (!pr_xattr)
+		return -ENOMEM;
+
+	p = pr_xattr;
+	rc = tcmu_pr_info_vers_seq_encode(p, buf_remain, pr_info->vers,
+					  pr_info->seq);
+	if (rc < 0) {
+		rc = -EINVAL;
+		goto err_xattr_free;
+	}
+
+	p += rc;
+	buf_remain -= rc;
+
+	rc = tcmu_pr_info_scsi2_rsv_encode(p, buf_remain, pr_info->scsi2_rsv);
+	if (rc < 0) {
+		rc = -EINVAL;
+		goto err_xattr_free;
+	}
+
+	p += rc;
+	buf_remain -= rc;
+
+	rc = tcmu_pr_info_gen_encode(p, buf_remain, pr_info->gen);
+	if (rc < 0) {
+		rc = -EINVAL;
+		goto err_xattr_free;
+	}
+
+	p += rc;
+	buf_remain -= rc;
+
+	rc = tcmu_pr_info_rsv_encode(p, buf_remain, pr_info->rsv);
+	if (rc < 0) {
+		rc = -EINVAL;
+		goto err_xattr_free;
+	}
+
+	p += rc;
+	buf_remain -= rc;
+
+	rc = tcmu_pr_info_num_regs_encode(p, buf_remain, pr_info->num_regs);
+	if (rc < 0) {
+		rc = -EINVAL;
+		goto err_xattr_free;
+	}
+
+	p += rc;
+	buf_remain -= rc;
+
+	i = 0;
+	list_for_each_entry(reg, &pr_info->regs, regs_node) {
+		rc = tcmu_pr_info_reg_encode(p, buf_remain, reg);
+		if (rc < 0) {
+			rc = -EINVAL;
+			goto err_xattr_free;
+		}
+
+		p += rc;
+		buf_remain -= rc;
+		i++;
+	}
+
+	if (i != pr_info->num_regs) {
+		pr_err("mismatch between PR num_regs and list entries!\n");
+		rc = -EINVAL;
+		goto err_xattr_free;
+	}
+
+	*_pr_xattr = pr_xattr;
+	/* +1 to include null term */
+	*pr_xattr_len = (p - pr_xattr) + 1;
+
+	pr_err("successfully encoded all %d PR regs into %d bytes: %s\n",
+	       pr_info->num_regs, *pr_xattr_len, pr_xattr);
+
+	return 0;
+
+err_xattr_free:
+	kfree(pr_xattr);
 	return rc;
 }
 
