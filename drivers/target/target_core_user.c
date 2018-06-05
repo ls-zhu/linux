@@ -2485,6 +2485,26 @@ err_info_free:
 	return rc;
 }
 
+static int tcmu_pr_info_append_reg(struct tcmu_pr_info *pr_info,
+				   char *nexus, u64 key)
+{
+	struct tcmu_pr_reg *reg;
+
+	reg = kmalloc(sizeof(*reg), GFP_KERNEL);
+	if (!reg)
+		return -ENOMEM;
+
+	reg->key = key;
+	strlcpy(reg->it_nexus, nexus, ARRAY_SIZE(reg->it_nexus));
+
+	list_add_tail(&reg->regs_node, &pr_info->regs);
+	pr_info->num_regs++;
+
+	pr_debug("appended pr_info reg: 0x%llx\n", reg->key);
+
+	return 0;
+}
+
 static int tcmu_configure_device(struct se_device *dev)
 {
 	struct tcmu_dev *udev = TCMU_DEV(dev);
