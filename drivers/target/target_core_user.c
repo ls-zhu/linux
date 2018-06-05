@@ -2829,6 +2829,23 @@ err_out:
 	return ret;
 }
 
+static int tcmu_pr_info_mock_empty(struct tcmu_pr_info **_pr_info)
+{
+	struct tcmu_pr_info *pr_info;
+
+	pr_info = kzalloc(sizeof(*pr_info), GFP_KERNEL);
+	if (!pr_info)
+		return -ENOMEM;
+
+	pr_info->vers = TCMU_PR_INFO_XATTR_VERS;
+	INIT_LIST_HEAD(&pr_info->regs);
+
+	*_pr_info = pr_info;
+	pr_debug("successfully initialized mock PR info\n");
+
+	return 0;
+}
+
 static int tcmu_configure_device(struct se_device *dev)
 {
 	struct tcmu_dev *udev = TCMU_DEV(dev);
