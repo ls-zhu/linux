@@ -2614,6 +2614,40 @@ static int tcmu_pr_info_unregister_reg(struct tcmu_pr_info *pr_info,
 	return 0;
 }
 
+/* handle PR registration for a currently registered I_T nexus */
+static sense_reason_t
+tcmu_execute_pr_register_existing(struct tcmu_pr_info *pr_info,
+				  u64 old_key, u64 new_key, char *it_nexus,
+				  struct tcmu_pr_reg *existing_reg,
+				  bool ignore_existing)
+{
+	sense_reason_t ret;
+	int rc;
+
+	pr_debug("PR registration for registered nexus: %s\n", it_nexus);
+
+	if (!ignore_existing && (old_key != existing_reg->key)) {
+		ret = TCM_RESERVATION_CONFLICT;
+		goto out;
+	}
+
+	if (new_key == 0) {
+		/* unregister */
+		rc = tcmu_pr_info_unregister_reg(pr_info, existing_reg);
+		if (rc < 0) {
+			ret = TCM_OUT_OF_RESOURCES;
+			goto out;
+		}
+	} else {
+		/* update key */
+		existing_reg->key = new_key;
+	}
+
+	ret = TCM_NO_SENSE;
+out:
+	return ret;
+}
+
 static int tcmu_configure_device(struct se_device *dev)
 {
 	struct tcmu_dev *udev = TCMU_DEV(dev);
