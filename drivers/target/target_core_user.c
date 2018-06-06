@@ -2955,6 +2955,21 @@ tcmu_execute_pr_read_keys(struct se_cmd *cmd, unsigned char *buf, u32 buf_len)
 	return TCM_NO_SENSE;
 }
 
+/*
+ * This function can help to check wheterh the device support
+ * pass through PR operations. Now only Ceph RBD support
+ * passthrough PR. When someday we have another kind of
+ * device can support passthrough PR, we can easily add
+ * a line like ret |= !strncmp(udev->dev_config, "qcow/", 5);
+ */
+static int is_passthrough_pr_supportive_dev(struct tcmu_dev *udev)
+{
+	int ret = 0;
+
+	ret |= !strncmp(udev->dev_config, "rbd/", 4);
+	return ret;
+}
+
 static int tcmu_configure_device(struct se_device *dev)
 {
 	struct tcmu_dev *udev = TCMU_DEV(dev);
@@ -3045,6 +3060,11 @@ static int tcmu_configure_device(struct se_device *dev)
 	mutex_lock(&root_udev_mutex);
 	list_add(&udev->node, &root_udev);
 	mutex_unlock(&root_udev_mutex);
+
+	if (is_passthrough_pr_supportive_dev(udev) && dev->transport->pr_ops) {
+		mutex_init(&udev->pr_info.pr_info_lock);
+		dev->passthrough_pr = PASSTHROUGH_PR_SUPPORT;
+	}
 
 	return 0;
 

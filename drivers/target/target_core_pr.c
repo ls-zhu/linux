@@ -2064,6 +2064,21 @@ core_scsi3_emulate_pro_register(struct se_cmd *cmd, u64 res_key, u64 sa_res_key,
 	sense_reason_t ret = TCM_NO_SENSE;
 	int pr_holder = 0, type;
 
+	if (dev->transport->pr_ops && dev->transport->pr_ops->pr_register
+	    && dev->passthrough_pr) {
+		bool ignore_existing;
+
+		if (register_type == REGISTER_AND_IGNORE_EXISTING_KEY)
+			ignore_existing = true;
+		else
+			ignore_existing = false;
+		ret = dev->transport->pr_ops->pr_register(cmd, res_key,
+							  sa_res_key, aptpl,
+							  all_tg_pt, spec_i_pt,
+							  ignore_existing);
+		return ret;
+	}
+
 	if (!se_sess || !se_lun) {
 		pr_err("SPC-3 PR: se_sess || struct se_lun is NULL!\n");
 		return TCM_LOGICAL_UNIT_COMMUNICATION_FAILURE;
@@ -3707,6 +3722,7 @@ core_scsi3_pri_read_keys(struct se_cmd *cmd)
 	struct t10_pr_registration *pr_reg;
 	unsigned char *buf;
 	u32 add_len = 0, off = 8;
+	sense_reason_t ret = 0;
 
 	if (cmd->data_length < 8) {
 		pr_err("PRIN SA READ_KEYS SCSI Data Length: %u"
@@ -3717,6 +3733,13 @@ core_scsi3_pri_read_keys(struct se_cmd *cmd)
 	buf = transport_kmap_data_sg(cmd);
 	if (!buf)
 		return TCM_LOGICAL_UNIT_COMMUNICATION_FAILURE;
+
+	if (dev->transport->pr_ops && dev->transport->pr_ops->pr_read_keys
+	    && dev->passthrough_pr) {
+		ret = dev->transport->pr_ops->pr_read_keys(cmd, buf,
+							   cmd->data_length);
+		return ret;
+	}
 
 	put_unaligned_be32(dev->t10_pr.pr_generation, buf);
 

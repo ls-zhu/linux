@@ -49,6 +49,8 @@
 #define PR_APTPL_MAX_IPORT_LEN			256
 #define PR_APTPL_MAX_TPORT_LEN			256
 
+#define PASSTHROUGH_PR_SUPPORT			1
+
 /*
  *  Function defined in target_core_spc.c
  */

@@ -825,6 +825,13 @@ struct se_device {
 	/* For se_lun->lun_se_dev RCU read-side critical access */
 	u32			hba_index;
 	struct rcu_head		rcu_head;
+	/*
+	 * For now, only Ceph RBD support pass through PR operations,
+	 * others like QCOW can not support this yet, so we need this
+	 * int to indicate whether we can send pass through PR message
+	 * to userspace.
+	 */
+	int passthrough_pr;
 };
 
 struct se_hba {
