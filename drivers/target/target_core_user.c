@@ -3701,6 +3701,11 @@ static struct configfs_attribute *tcmu_action_attrs[] = {
 	NULL,
 };
 
+static struct target_pr_ops tcmu_pr_ops = {
+	.pr_read_keys		= tcmu_execute_pr_read_keys,
+	.pr_register		= tcmu_execute_pr_register,
+};
+
 static struct target_backend_ops tcmu_ops = {
 	.name			= "user",
 	.owner			= THIS_MODULE,
@@ -3717,6 +3722,7 @@ static struct target_backend_ops tcmu_ops = {
 	.get_device_type	= sbc_get_device_type,
 	.get_blocks		= tcmu_get_blocks,
 	.tb_dev_action_attrs	= tcmu_action_attrs,
+	.pr_ops			= &tcmu_pr_ops,
 };
 
 static void find_free_blocks(void)
