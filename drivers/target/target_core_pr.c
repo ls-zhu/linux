@@ -2450,6 +2450,8 @@ static sense_reason_t
 core_scsi3_emulate_pro_reserve(struct se_cmd *cmd, int type, int scope,
 		u64 res_key)
 {
+	struct se_device *dev = cmd->se_dev;
+
 	switch (type) {
 	case PR_TYPE_WRITE_EXCLUSIVE:
 	case PR_TYPE_EXCLUSIVE_ACCESS:
@@ -2457,7 +2459,14 @@ core_scsi3_emulate_pro_reserve(struct se_cmd *cmd, int type, int scope,
 	case PR_TYPE_EXCLUSIVE_ACCESS_REGONLY:
 	case PR_TYPE_WRITE_EXCLUSIVE_ALLREG:
 	case PR_TYPE_EXCLUSIVE_ACCESS_ALLREG:
-		return core_scsi3_pro_reserve(cmd, type, scope, res_key);
+		if (dev->transport->pr_ops &&
+		    dev->transport->pr_ops->pr_register &&
+		    dev->passthrough_pr)
+			return dev->transport->pr_ops->pr_reserve(cmd, type,
+								  res_key);
+		else
+			return core_scsi3_pro_reserve(cmd, type, scope,
+						      res_key);
 	default:
 		pr_err("SPC-3 PR: Unknown Service Action RESERVE Type:"
 			" 0x%02x\n", type);

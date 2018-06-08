@@ -3011,6 +3011,7 @@ tcmu_execute_pr_reserve(struct se_cmd *cmd, int type, u64 key)
 	sense_reason_t ret;
 	int retries = 0;
 
+	mutex_lock(&udev->pr_info.pr_info_lock);
 	udev->pr_info.pr_info_buf = kzalloc(TCMU_PR_INFO_XATTR_MAX_SIZE,
 					    GFP_KERNEL);
 	if (!udev->pr_info.pr_info_buf)
@@ -3127,6 +3128,7 @@ err_info_free:
 	tcmu_pr_info_free(pr_info);
 	kfree(pr_xattr);
 	kfree(udev->pr_info.pr_info_buf);
+	mutex_unlock(&udev->pr_info.pr_info_lock);
 	return ret;
 }
 
