@@ -2554,6 +2554,15 @@ core_scsi3_emulate_pro_release(struct se_cmd *cmd, int type, int scope,
 	struct t10_reservation *pr_tmpl = &dev->t10_pr;
 	sense_reason_t ret = 0;
 
+	if (dev->transport->pr_ops && dev->transport->pr_ops->pr_register
+	    && dev->passthrough_pr) {
+		if (scope != PR_SCOPE_LU_SCOPE) {
+			pr_err("SPC-3 PR: Illegal SCOPE: 0x%02x\n", scope);
+			return TCM_INVALID_PARAMETER_LIST;
+		}
+		return dev->transport->pr_ops->pr_release(cmd, type, res_key);
+	}
+
 	if (!se_sess || !se_lun) {
 		pr_err("SPC-3 PR: se_sess || struct se_lun is NULL!\n");
 		return TCM_LOGICAL_UNIT_COMMUNICATION_FAILURE;
