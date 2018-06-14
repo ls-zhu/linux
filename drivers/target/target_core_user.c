@@ -4115,6 +4115,7 @@ static struct target_pr_ops tcmu_pr_ops = {
 	.pr_register		= tcmu_execute_pr_register,
 	.pr_reserve		= tcmu_execute_pr_reserve,
 	.pr_release		= tcmu_execute_pr_release,
+	.pr_clear		= tcmu_execute_pr_clear,
 };
 
 static struct target_backend_ops tcmu_ops = {

@@ -2719,6 +2719,11 @@ core_scsi3_emulate_pro_clear(struct se_cmd *cmd, u64 res_key)
 	struct t10_pr_registration *pr_reg, *pr_reg_tmp, *pr_reg_n, *pr_res_holder;
 	u64 pr_res_mapped_lun = 0;
 	int calling_it_nexus = 0;
+
+	if (dev->transport->pr_ops && dev->transport->pr_ops->pr_read_keys
+	    && dev->passthrough_pr)
+		return dev->transport->pr_ops->pr_clear(cmd, res_key);
+
 	/*
 	 * Locate the existing *pr_reg via struct se_node_acl pointers
 	 */
