@@ -273,19 +273,15 @@ static int kvm_gmem_release(struct inode *inode, struct file *file)
 	return 0;
 }
 
-static struct file *kvm_gmem_get_file(struct kvm_memory_slot *slot)
+static inline struct file *kvm_gmem_get_file(struct kvm_memory_slot *slot)
 {
-	struct file *file;
-
-	rcu_read_lock();
-
-	file = rcu_dereference(slot->gmem.file);
-	if (file && !get_file_rcu(file))
-		file = NULL;
-
-	rcu_read_unlock();
-
-	return file;
+      /*
+       * Do not return slot->gmem.file if it has already been closed;
+       * there might be some time between the last fput() and when
+       * kvm_gmem_release() clears slot->gmem.file, and you do not
+       * want to spin in the meanwhile.
+       */
+      return get_file_active(&slot->gmem.file);
 }
 
 static struct file_operations kvm_gmem_fops = {
