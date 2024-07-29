@@ -3321,6 +3321,8 @@ static long kfd_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 	}
 
 	retcode = func(filep, process, kdata);
+	if (retcode)
+		goto err_retcode;
 
 	if (cmd & IOC_OUT)
 		if (copy_to_user((void __user *)arg, kdata, usize) != 0)
@@ -3334,6 +3336,7 @@ err_i1:
 	if (kdata != stack_kdata)
 		kfree(kdata);
 
+err_retcode:
 	if (retcode)
 		dev_dbg(kfd_device, "ioctl cmd (#0x%x), arg 0x%lx, ret = %d\n",
 				nr, arg, retcode);
