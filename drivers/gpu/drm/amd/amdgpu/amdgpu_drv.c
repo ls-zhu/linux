@@ -846,6 +846,14 @@ MODULE_PARM_DESC(no_system_mem_limit, "disable system memory limit (false = defa
 int amdgpu_no_queue_eviction_on_vm_fault;
 MODULE_PARM_DESC(no_queue_eviction_on_vm_fault, "No queue eviction on VM fault (0 = queue eviction, 1 = no queue eviction)");
 module_param_named(no_queue_eviction_on_vm_fault, amdgpu_no_queue_eviction_on_vm_fault, int, 0444);
+
+/**
+ * DOC: kfd_multille_contexts_enable(bool)
+ * Enable multiple kfd multiple contexts (kfd_process) support
+ */
+bool kfd_multiple_contexts_enable = false;
+module_param(kfd_multiple_contexts_enable, bool, 0644);
+MODULE_PARM_DESC(kfd_multiple_contexts_enable, "Control whether kfd multiple contexts(kfd_process) feature is enabled (false = default)");
 #endif
 
 /**
