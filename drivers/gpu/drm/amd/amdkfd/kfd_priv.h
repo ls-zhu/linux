@@ -1002,6 +1002,9 @@ struct kfd_process {
 	struct semaphore runtime_enable_sema;
 	bool is_runtime_retry;
 	struct kfd_runtime_info runtime_info;
+
+	/* indicating whether this is a primary kfd_process */
+	bool is_primary;
 };
 
 #define KFD_PROCESS_TABLE_SIZE 8 /* bits: 32 entries */
