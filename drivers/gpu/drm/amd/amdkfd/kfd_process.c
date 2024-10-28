@@ -1235,7 +1235,7 @@ static void kfd_process_table_remove(struct kfd_process *p)
 	synchronize_srcu(&kfd_processes_srcu);
 }
 
-static void kfd_process_notifier_release_internal(struct kfd_process *p)
+void kfd_process_notifier_release_internal(struct kfd_process *p)
 {
 	int i;
 
@@ -1272,7 +1272,10 @@ static void kfd_process_notifier_release_internal(struct kfd_process *p)
 		srcu_read_unlock(&kfd_processes_srcu, idx);
 	}
 
-	mmu_notifier_put(&p->mmu_notifier);
+	if (p->is_primary)
+		mmu_notifier_put(&p->mmu_notifier);
+	else
+		kfd_process_table_remove(p);
 }
 
 static void kfd_process_notifier_release(struct mmu_notifier *mn,
